@@ -13,6 +13,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Configuration
 GENTOO_ROOT="${GENTOO_ROOT:-/mnt/gentoo}"
 WORK_DIR="${WORK_DIR:-/tmp/gentoo-install}"
+DRY_RUN="${DRY_RUN:-0}"
+DEBUG="${DEBUG:-0}"
 
 # ============================================================
 # Load libraries
