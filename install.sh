@@ -257,6 +257,7 @@ phase_sync_update() {
 
     sync_portage
     update_world
+    finalize_sync_config
 
     log_info "Sync and update complete"
 }

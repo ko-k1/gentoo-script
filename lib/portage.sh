@@ -15,22 +15,12 @@ init_portage_dirs() {
     log_info "Portage directories initialized"
 }
 
-# Configure Gentoo repository
+# Configure Gentoo repository (initial sync always uses rsync for compatibility)
 configure_gentoo_repo() {
     local root="${GENTOO_ROOT:-/mnt/gentoo}"
     local repo_file="${root}/etc/portage/repos.conf/gentoo.conf"
 
-    if [[ "$SYNC_TYPE" == "git" ]]; then
-        cat > "$repo_file" << 'REPO'
-[gentoo]
-location = /var/db/repos/gentoo
-sync-type = git
-sync-uri = https://github.com/gentoo-mirror/gentoo.git
-auto-sync = yes
-sync-git-verify-commit-signature = yes
-REPO
-    else
-        cat > "$repo_file" << 'REPO'
+    cat > "$repo_file" << 'REPO'
 [gentoo]
 location = /var/db/repos/gentoo
 sync-type = rsync
@@ -40,9 +30,31 @@ sync-rsync-verify-jobs = 1
 sync-rsync-verify-metamanifest = yes
 sync-rsync-verify-max-age = 24
 REPO
+
+    log_info "Gentoo repo configured (initial sync-type: rsync)"
+}
+
+# Switch to git sync after Portage is updated (supports git sync)
+finalize_sync_config() {
+    local root="${GENTOO_ROOT:-/mnt/gentoo}"
+    local repo_file="${root}/etc/portage/repos.conf/gentoo.conf"
+
+    if [[ "$SYNC_TYPE" != "git" ]]; then
+        return
     fi
 
-    log_info "Gentoo repo configured (sync-type: ${SYNC_TYPE})"
+    log_info "Switching gentoo repo to git sync..."
+
+    cat > "$repo_file" << 'REPO'
+[gentoo]
+location = /var/db/repos/gentoo
+sync-type = git
+sync-uri = https://github.com/gentoo-mirror/gentoo.git
+auto-sync = yes
+sync-git-verify-commit-signature = yes
+REPO
+
+    log_info "Gentoo repo switched to git sync"
 }
 
 # Apply USE flags
@@ -94,11 +106,20 @@ apply_license_accepts() {
 # Sync portage tree
 sync_portage() {
     log_info "Syncing Portage tree..."
-    chroot_run "emerge --sync" || {
-        log_warn "emerge --sync failed, trying webrsync..."
-        chroot_run "emerge-webrsync"
-    }
-    log_info "Portage tree synced"
+
+    if chroot_run "emerge --sync"; then
+        log_info "Portage tree synced"
+        return
+    fi
+
+    log_warn "emerge --sync failed, trying webrsync..."
+    if chroot_run "command -v emerge-webrsync"; then
+        chroot_run "emerge-webrsync" || log_warn "emerge-webrsync also failed"
+    else
+        log_warn "emerge-webrsync not available in stage3"
+    fi
+
+    log_info "Portage tree sync attempted"
 }
 
 # Update @world
