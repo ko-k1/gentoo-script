@@ -153,6 +153,7 @@ MAKECONF
 # Get profile path for arch + init + desktop
 get_profile_path() {
     local arch="$1"
+    local root="${GENTOO_ROOT:-/mnt/gentoo}"
     local profile_base
 
     case "$arch" in
@@ -163,6 +164,16 @@ get_profile_path() {
             profile_base="default/linux/arm64"
             ;;
     esac
+
+    # Detect profile version from existing symlink (e.g., "23.0" from ".../default/linux/amd64/23.0")
+    local current_link
+    if current_link=$(readlink "${root}/etc/portage/make.profile" 2>/dev/null); then
+        local version
+        version=$(echo "$current_link" | grep -oP '/\K[0-9]+\.[0-9]+(?=/?$|/)' | tail -1)
+        if [[ -n "$version" ]]; then
+            profile_base="${profile_base}/${version}"
+        fi
+    fi
 
     local suffix
     case "$INIT_SYSTEM" in
@@ -203,9 +214,27 @@ set_profile() {
     profile_path=$(get_profile_path "$arch")
 
     log_info "Setting Portage profile: $profile_path"
-    chroot_run "eselect profile set '${profile_path}'" || {
-        log_warn "Could not set profile automatically, trying to match..."
-        chroot_run "eselect profile list"
-        chroot_run "eselect profile set '${profile_path}'" || die "Failed to set profile"
-    }
+    if chroot_run "eselect profile set '${profile_path}'" 2>/dev/null; then
+        log_info "Profile set to: $profile_path"
+        return
+    fi
+
+    log_warn "Profile '$profile_path' not found, listing available profiles..."
+    local profile_list
+    profile_list=$(chroot_run "eselect profile list" 2>/dev/null)
+
+    local pattern="${profile_path#default/}"
+    local profile_num
+    profile_num=$(echo "$profile_list" | grep -F "$pattern" | grep -oP '\[\K\d+(?=\])' | head -1)
+
+    if [[ -n "$profile_num" ]]; then
+        chroot_run "eselect profile set ${profile_num}" && {
+            log_info "Profile set using number: $profile_num"
+            return
+        }
+    fi
+
+    log_info "Available profiles:"
+    echo "$profile_list" >&2
+    die "Failed to set profile"
 }
