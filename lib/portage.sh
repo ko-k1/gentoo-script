@@ -120,13 +120,23 @@ sync_portage() {
     fi
 
     log_info "Portage tree sync attempted"
+    verify_portage_tree
+}
+
+# Verify portage tree is usable
+verify_portage_tree() {
+    log_info "Verifying portage tree..."
+    chroot_run "[[ -d /var/db/repos/gentoo/profiles ]]" || {
+        die "Portage tree missing or empty after sync"
+    }
+    log_info "Portage tree verified"
 }
 
 # Update @world
 update_world() {
     local opts="--update --deep --newuse"
 
-    if [[ "$ENABLE_BINHOST" == "yes" ]]; then
+    if [[ "$ENABLE_BINHOST" == "yes" ]] && [[ -n "$BINHOST_URL" ]]; then
         opts="${opts} --getbinpkg"
     fi
 

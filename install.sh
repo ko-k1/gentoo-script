@@ -256,6 +256,7 @@ phase_sync_update() {
     fi
 
     sync_portage
+    set_profile "$ARCH"
     update_world
     finalize_sync_config
 
