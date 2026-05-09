@@ -184,7 +184,7 @@ phase_preflight() {
 phase_partition() {
     log_step "=== Phase 2: Partition and Format ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would partition /dev/${TARGET_DISK} with ${ROOT_FS}"
         return
     fi
@@ -200,7 +200,7 @@ phase_partition() {
 phase_stage3() {
     log_step "=== Phase 3: Stage3 ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would download/extract stage3"
         return
     fi
@@ -216,7 +216,7 @@ phase_stage3() {
 phase_chroot_setup() {
     log_step "=== Phase 4: Chroot Setup ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would setup chroot"
         return
     fi
@@ -230,7 +230,7 @@ phase_chroot_setup() {
 phase_optimize() {
     log_step "=== Phase 5: Optimization and Portage ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would configure make.conf and Portage"
         return
     fi
@@ -250,7 +250,7 @@ phase_optimize() {
 phase_sync_update() {
     log_step "=== Phase 6: Sync and Update @world ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would sync Portage and update @world"
         return
     fi
@@ -265,7 +265,7 @@ phase_sync_update() {
 phase_kernel() {
     log_step "=== Phase 7: Kernel ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would install kernel ($KERNEL_TYPE)"
         return
     fi
@@ -280,7 +280,7 @@ phase_kernel() {
 phase_system() {
     log_step "=== Phase 8: System Configuration ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would configure system"
         return
     fi
@@ -294,7 +294,7 @@ phase_system() {
 phase_acceleration() {
     log_step "=== Phase 9: Acceleration ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would setup acceleration (ccache/binhost/distcc)"
         return
     fi
@@ -308,7 +308,7 @@ phase_acceleration() {
 phase_desktop() {
     log_step "=== Phase 10: Desktop ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would install desktop ($DESKTOP_ENV)"
         return
     fi
@@ -322,7 +322,7 @@ phase_desktop() {
 phase_platform() {
     log_step "=== Phase 11: Platform Optimizations ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would apply platform optimizations ($PLATFORM)"
         return
     fi
@@ -350,7 +350,7 @@ phase_platform() {
 phase_finalize() {
     log_step "=== Phase 12: Finalize ==="
 
-    if [[ "$DRY_RUN" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would finalize installation"
         return
     fi
