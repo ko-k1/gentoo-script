@@ -15,7 +15,7 @@ NC='\033[0m'
 
 # Logging
 log_info() {
-    echo -e "${GREEN}[INFO]${NC} $*"
+    echo -e "${GREEN}[INFO]${NC} $*" >&2
 }
 
 log_warn() {
@@ -27,7 +27,7 @@ log_error() {
 }
 
 log_step() {
-    echo -e "${BLUE}[STEP]${NC} $*"
+    echo -e "${BLUE}[STEP]${NC} $*" >&2
 }
 
 log_debug() {
