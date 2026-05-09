@@ -97,13 +97,13 @@ create_filesystems() {
     log_info "Creating ${fs_type} filesystem on root partition"
     case "$fs_type" in
         ext4)
-            mkfs.ext4 -L -f "root" "$root_part"
+            mkfs.ext4 -L "root" "$root_part" -f
             ;;
         btrfs)
-            mkfs.btrfs -L -f "root" "$root_part"
+            mkfs.btrfs -L "root" "$root_part" -f
             ;;
         xfs)
-            mkfs.xfs -L -f "root" "$root_part"
+            mkfs.xfs -L "root" "$root_part" -f
             ;;
         zfs)
             require_cmd zpool
