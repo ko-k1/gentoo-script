@@ -23,7 +23,8 @@ prepare_stage3() {
             die "Insufficient disk space in $WORK_DIR: ${available}MB available, need ~500MB"
         fi
 
-        retry 3 30 curl -L --fail -o "$stage3_file" "$stage3_source"
+        log_debug "Downloading URL: $stage3_source"
+        retry 3 30 curl -g -L --fail -o "$stage3_file" "$stage3_source"
     fi
 
     if [[ ! -f "$stage3_file" ]]; then
@@ -72,7 +73,8 @@ download_checksums() {
     fi
 
     log_info "Downloading checksums..."
-    if ! curl -sL --fail "${base_url}/DIGESTS" -o "$checksum_file" 2>/dev/null; then
+    log_debug "Fetching DIGESTS from: ${base_url}/DIGESTS"
+    if ! curl -sgL --fail "${base_url}/DIGESTS" -o "$checksum_file" 2>/dev/null; then
         log_warn "Checksums not available (DIGESTS not found)"
         return
     fi

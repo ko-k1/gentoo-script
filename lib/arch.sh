@@ -114,7 +114,8 @@ build_stage3_url() {
     log_info "Fetching latest stage3 info: $info_url"
 
     local latest_info
-    latest_info=$(retry 3 5 curl -sL "$info_url") || die "Could not fetch latest stage3 info from $info_url"
+    log_debug "Fetching: $info_url"
+    latest_info=$(retry 3 5 curl -sgL "$info_url") || die "Could not fetch latest stage3 info from $info_url"
 
     local data_line
     data_line=$(echo "$latest_info" | grep -E '^[0-9]{8}T[0-9]{6}Z/' | head -1)

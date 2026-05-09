@@ -101,14 +101,14 @@ load_config() {
 
     # 1. Load defaults
     log_info "Loading defaults..."
-    source "${SCRIPT_DIR}/config/defaults.conf"
+    source <(tr -d '\r' < "${SCRIPT_DIR}/config/defaults.conf")
 
     # 2. Load profile if specified
     if [[ -n "$profile" ]]; then
         log_info "Loading profile: $profile"
         local profile_file="${SCRIPT_DIR}/config/profiles/${profile}.conf"
         if [[ -f "$profile_file" ]]; then
-            source "$profile_file"
+            source <(tr -d '\r' < "$profile_file")
         else
             die "Profile not found: $profile_file"
         fi
@@ -118,7 +118,7 @@ load_config() {
     if [[ -n "$user_conf" ]]; then
         log_info "Loading user config: $user_conf"
         if [[ -f "$user_conf" ]]; then
-            source "$user_conf"
+            source <(tr -d '\r' < "$user_conf")
         else
             die "User config not found: $user_conf"
         fi
