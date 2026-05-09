@@ -134,14 +134,25 @@ verify_portage_tree() {
 
 # Update @world
 update_world() {
-    local opts="--update --deep --newuse"
+    local opts="--update --deep --newuse --verbose --backtrack=30"
 
     if [[ "$ENABLE_BINHOST" == "yes" ]] && [[ -n "$BINHOST_URL" ]]; then
         opts="${opts} --getbinpkg"
     fi
 
     log_info "Updating @world..."
-    chroot_run "emerge ${opts} @world" || die "Failed to update @world"
+
+    local temp_file
+    temp_file=$(mktemp) || die "Failed to create temp file"
+
+    if ! chroot_run "emerge ${opts} @world" 2>&1 | tee "$temp_file"; then
+        log_error "emerge --update @world failed. Last 30 lines:"
+        tail -30 "$temp_file" >&2
+        rm -f "$temp_file"
+        die "Failed to update @world"
+    fi
+
+    rm -f "$temp_file"
     log_info "@world update complete"
 }
 
