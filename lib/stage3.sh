@@ -7,14 +7,23 @@
 prepare_stage3() {
     local stage3_source
     stage3_source=$(get_stage3_url)
-    local stage3_file="${WORK_DIR}/stage3.tar.zst"
+    local stage3_filename
+    stage3_filename=$(basename "$stage3_source")
+    local stage3_file="${WORK_DIR}/${stage3_filename}"
 
     if [[ -n "$STAGE3_PATH" ]]; then
         log_info "Using local stage3: $STAGE3_PATH"
         cp "$STAGE3_PATH" "$stage3_file"
     else
         log_info "Downloading stage3: $stage3_source"
-        retry 3 30 curl -L -o "$stage3_file" "$stage3_source"
+
+        local available
+        available=$(df --output=avail -m "$WORK_DIR" 2>/dev/null | tail -1)
+        if [[ -n "$available" ]] && (( available < 500 )); then
+            die "Insufficient disk space in $WORK_DIR: ${available}MB available, need ~500MB"
+        fi
+
+        retry 3 30 curl -L --fail -o "$stage3_file" "$stage3_source"
     fi
 
     if [[ ! -f "$stage3_file" ]]; then
@@ -26,7 +35,11 @@ prepare_stage3() {
 
 # Extract stage3 to target
 extract_stage3() {
-    local stage3_file="${WORK_DIR}/stage3.tar.zst"
+    local stage3_source
+    stage3_source=$(get_stage3_url)
+    local stage3_filename
+    stage3_filename=$(basename "$stage3_source")
+    local stage3_file="${WORK_DIR}/${stage3_filename}"
     local target="${GENTOO_ROOT:-/mnt/gentoo}"
 
     ensure_dir "$target"
@@ -36,7 +49,6 @@ extract_stage3() {
 
     log_info "Stage3 extraction complete"
 
-    # Verify extraction
     if [[ ! -d "${target}/etc" ]] || [[ ! -d "${target}/usr" ]]; then
         die "Stage3 extraction verification failed"
     fi
@@ -48,8 +60,9 @@ download_checksums() {
     stage3_source=$(get_stage3_url)
     local base_url
     base_url=$(dirname "$stage3_source")
-    local stage3_file
-    stage3_file=$(basename "$stage3_source")
+    local stage3_filename
+    stage3_filename=$(basename "$stage3_source")
+    local stage3_file="${WORK_DIR}/${stage3_filename}"
 
     local checksum_file="${WORK_DIR}/DIGESTS"
 
@@ -59,23 +72,22 @@ download_checksums() {
     fi
 
     log_info "Downloading checksums..."
-    retry 3 5 curl -sL "${base_url}/DIGESTS" -o "$checksum_file"
+    if ! curl -sL --fail "${base_url}/DIGESTS" -o "$checksum_file" 2>/dev/null; then
+        log_warn "Checksums not available (DIGESTS not found)"
+        return
+    fi
 
-    if [[ -f "$checksum_file" ]]; then
-        log_info "Checksums downloaded, verifying..."
-        if grep -q "$stage3_file" "$checksum_file"; then
-            local expected
-            expected=$(grep -A1 "$stage3_file" "$checksum_file" | tail -1 | awk '{print $1}')
-            local actual
-            actual=$(sha512sum "${WORK_DIR}/stage3.tar.zst" | awk '{print $1}')
+    log_info "Checksums downloaded, verifying..."
+    if grep -q "$stage3_filename" "$checksum_file"; then
+        local expected
+        expected=$(grep -A1 "$stage3_filename" "$checksum_file" | tail -1 | awk '{print $1}')
+        local actual
+        actual=$(sha512sum "$stage3_file" | awk '{print $1}')
 
-            if [[ "$expected" == "$actual" ]]; then
-                log_info "Stage3 checksum verified"
-            else
-                log_warn "Stage3 checksum mismatch (continuing anyway)"
-            fi
+        if [[ "$expected" == "$actual" ]]; then
+            log_info "Stage3 checksum verified"
+        else
+            log_warn "Stage3 checksum mismatch (continuing anyway)"
         fi
-    else
-        log_warn "Could not download checksums"
     fi
 }

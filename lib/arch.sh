@@ -97,25 +97,38 @@ detect_arm_cpu_flags() {
     log_info "Detected CPU flags: $CPU_FLAGS_DETECTED"
 }
 
-# Build stage3 URL from mirror
+# Build stage3 URL from mirror using official latest-stage3-*.txt pointer
 build_stage3_url() {
     local mirror="$1"
     local arch="$2"
     local stage3_arch="$3"
+    local init_system="$4"
 
     local base_url="${mirror}/amd64/autobuilds"
     if [[ "$arch" == "aarch64" ]]; then
         base_url="${mirror}/arm64/autobuilds"
     fi
 
-    local stage3_dir
-    stage3_dir=$(retry 3 5 curl -s "${base_url}/" | grep -oP 'stage3-${stage3_arch}-[^/]+(?=/)' | grep -v hardened | grep -v musl | head -1)
+    local info_url="${base_url}/latest-stage3-${stage3_arch}-${init_system}.txt"
 
-    if [[ -z "$stage3_dir" ]]; then
-        die "Could not find latest stage3 for ${stage3_arch}"
+    log_info "Fetching latest stage3 info: $info_url"
+
+    local latest_info
+    latest_info=$(retry 3 5 curl -sL "$info_url") || die "Could not fetch latest stage3 info from $info_url"
+
+    local data_line
+    data_line=$(echo "$latest_info" | grep -E '^[0-9]{8}T[0-9]{6}Z/' | head -1)
+
+    if [[ -z "$data_line" ]]; then
+        die "Could not parse latest stage3 info from $info_url"
     fi
 
-    echo "${base_url}/${stage3_dir}/stage3-${stage3_arch}-${stage3_dir}.tar.zst"
+    local stage3_dir
+    stage3_dir=$(echo "$data_line" | cut -d/ -f1)
+    local stage3_filename
+    stage3_filename=$(echo "$data_line" | cut -d/ -f2- | awk '{print $1}')
+
+    echo "${base_url}/${stage3_dir}/${stage3_filename}"
 }
 
 # Get stage3 download URL
@@ -129,7 +142,7 @@ get_stage3_url() {
     else
         log_info "Auto-detecting stage3 from mirrors..."
         local url
-        url=$(build_stage3_url "$MIRROR_URL" "$ARCH" "$STAGE3_ARCH")
+        url=$(build_stage3_url "$MIRROR_URL" "$ARCH" "$STAGE3_ARCH" "$INIT_SYSTEM")
         log_info "Resolved stage3 URL: $url"
         echo "$url"
     fi

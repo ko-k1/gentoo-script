@@ -164,10 +164,10 @@ phase_preflight() {
 
     if [[ "$DRY_RUN" != "1" ]]; then
         require_root
+        require_cmd blkid
     fi
     require_cmd curl
     require_cmd tar
-    require_cmd blkid
 
     ensure_dir "$WORK_DIR"
 
