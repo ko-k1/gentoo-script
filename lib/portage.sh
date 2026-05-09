@@ -200,7 +200,8 @@ _resolve_circular_dep() {
 
     # Parse: "break this cycle by adjusting USE flags" then "cat/pkg: +/-flag ..."
     while IFS= read -r line; do
-        local clean="${line/#\* /}"
+        local clean="$line"
+        clean="${clean#* }"    # strip leading "* " prefix
         clean="${clean# }"
 
         if [[ "$in_suggestion" == "0" ]] && echo "$clean" | grep -qi "break this cycle"; then
