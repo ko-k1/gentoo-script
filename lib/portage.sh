@@ -196,46 +196,57 @@ _resolve_circular_dep() {
     local root="${GENTOO_ROOT:-/mnt/gentoo}"
     local break_file="${root}/etc/portage/package.use/circular-break"
     local in_suggestion=0
+    local current_atom=""
     local -a packages=()
 
-    # Parse: "break this cycle by adjusting USE flags" then "cat/pkg: +/-flag ..."
+    local prefix_re='^[[:space:]]*\*[[:space:]]+(.*)'
+
     while IFS= read -r line; do
         local clean="$line"
-        clean="${clean#* }"    # strip leading "* " prefix
-        clean="${clean# }"
+        if [[ "$clean" =~ $prefix_re ]]; then
+            clean="${BASH_REMATCH[1]}"
+        fi
 
-        if [[ "$in_suggestion" == "0" ]] && echo "$clean" | grep -qi "break this cycle"; then
+        if [[ "$in_suggestion" == 0 ]] && grep -qi "break this cycle" <<<"$clean"; then
             in_suggestion=1
+            if [[ "$clean" =~ on\ ([a-zA-Z0-9._+-]+/[a-zA-Z0-9._+-]+): ]]; then
+                current_atom="${BASH_REMATCH[1]}"
+                packages+=("$current_atom")
+            fi
             continue
         fi
 
-        if [[ "$in_suggestion" == "1" ]]; then
+        if [[ "$in_suggestion" == 1 ]]; then
             [[ -z "$clean" ]] && break
-            if [[ "$clean" =~ ^[a-zA-Z0-9._+-]+/[a-zA-Z0-9._+-]+: ]]; then
-                local atom="${clean%%: *}"
-                local flags="${clean#*: }"
-                packages+=("$atom")
-                for flag in $flags; do
+
+            if [[ -z "$current_atom" ]] && [[ "$clean" =~ ^([a-zA-Z0-9._+-]+/[a-zA-Z0-9._+-]+):[[:space:]]+(.+) ]]; then
+                current_atom="${BASH_REMATCH[1]}"
+                packages+=("$current_atom")
+                clean="${BASH_REMATCH[2]}"
+            fi
+
+            if [[ -n "$current_atom" ]]; then
+                for flag in $clean; do
                     case "$flag" in
-                        -*) echo "$atom $flag" ;;
-                        +*) echo "$atom ${flag#+}" ;;
+                        -*) echo "$current_atom $flag" ;;
+                        +*) echo "$current_atom ${flag#+}" ;;
+                        *)  echo "$current_atom $flag" ;;
                     esac >> "$break_file"
                 done
             fi
         fi
     done < "$log_file"
 
-    if [[ "$in_suggestion" == "0" ]] || [[ ${#packages[@]} -eq 0 ]]; then
+    if [[ "$in_suggestion" == 0 ]] || [[ ${#packages[@]} -eq 0 ]]; then
         rm -f "$break_file"
         return 1
     fi
 
-    # Deduplicate and emerge --oneshot to break the cycle
     local unique_pkgs
     unique_pkgs=$(printf "%s\n" "${packages[@]}" | sort -u | tr '\n' ' ')
     log_info "Breaking circular dep: emerging $unique_pkgs"
 
-    chroot_run "emerge --ask=n --oneshot $unique_pkgs" || {
+    chroot_run "emerge --oneshot $unique_pkgs" || {
         rm -f "$break_file"
         return 1
     }
